@@ -28,7 +28,8 @@ volatile int ms_count = 0;
 float temp = 0;
 float msg = 0;
 
-inline static uint8_t transfer(uint8_t data) {
+// allow to transmit and receive data
+inline static uint8_t transfer(uint8_t data){
   SPDR = data;
   asm volatile("nop");
   while(!(SPSR & (1 << SPIF))) ; // wait
@@ -43,28 +44,20 @@ void SPI_MasterInit(void)
  SPCR = (1<<SPE)|(1<<MSTR)|(1<<SPR0);
  }
 
-// void SPI_Init(){
-// 	SPI_DDR = (1 << MOSI) | (1 << SCK) | (1 << CHIP_SELECT);// | (0 << MISO);
-// 	SPI_DDR &= ~(1 << MISO);
-//   SPI_PORT = (1 << MOSI) | (1 << SCK) | (1 << MISO) |(1 << CHIP_SELECT);
-	
-// 	SPCR = 0b11010000;
-// }
+void SPI_Transmit_data(uint8_t message){
+	SPDR = message;
+	while(!(SPSR & (1 << SPIF)))
+	;
+}
 
-// void SPI_Transmit_data(uint8_t message){
-// 	SPDR = message;
-// 	while(!(SPSR & (1 << SPIF)))
-// 	;
-// }
-
-// uint8_t SPI_Recieve_data(){
-// 	uint8_t data;
-// 	SPDR = 0x00;
-// 	while(!(SPSR & (1 << SPIF)))
-// 	;
-// 	data = SPDR;
-// 	return SPDR;	
-// }
+uint8_t SPI_Receive_data(){
+	uint8_t data;
+	SPDR = 0x00;
+	while(!(SPSR & (1 << SPIF)))
+	;
+	data = SPDR;
+	return SPDR;	
+}
 
 void USART_Init( unsigned int ubrr )
 {
@@ -110,8 +103,8 @@ ISR(TIMER0_OVF_vect){
 float convert_Temp(){
 	int data[9] = {0};
 	SPI_PORT &= ~(1 << CHIP_SELECT);
-	transfer(0xCC);
-	transfer(0x44);
+	SPI_Transmit_data(0xCC);
+	SPI_Transmit_data(0x44);
 	SPI_PORT |= (1 << CHIP_SELECT);
 	
 	while(ms_count != 100)
@@ -119,8 +112,8 @@ float convert_Temp(){
 	
 	ms_count = 0;
 	SPI_PORT &= ~(1 << CHIP_SELECT);
-	transfer(0x00);
-	transfer(0x00);
+	SPI_Recieve_data();
+	SPI_Recieve_data();
 	SPI_PORT |= (1 << CHIP_SELECT);
 	int T_KOD;
 	T_KOD = (data[0] | (data[1] << 8));
